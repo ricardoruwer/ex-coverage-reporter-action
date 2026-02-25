@@ -122,7 +122,7 @@ function ghRequest(method, path, body, token) {
     headers: {
       Accept: "application/vnd.github+json",
       Authorization: `Bearer ${token}`,
-      "User-Agent": "trr-coverage-comment",
+      "User-Agent": "ex-coverage-reporter-comment",
     },
   };
   if (body) {
