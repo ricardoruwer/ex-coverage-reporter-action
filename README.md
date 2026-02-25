@@ -40,6 +40,10 @@ On pull requests, the action will run `mix test --cover`, parse the output, and 
 - Elixir/Erlang must be set up in the job before this step (e.g. with `erlef/setup-beam`).
 - The project must support `mix test --cover` and produce a coverage table in the output (e.g. ExUnit with coverage configured).
 
+## Threshold behavior
+
+The **action’s** `coverage-threshold` is what decides whether the CI step fails. If your project has a different threshold in `mix.exs` (e.g. `test_coverage: [threshold: 90]`), `mix test --cover` may exit with code 3 when that project threshold isn’t met. This action treats that exit code as non-fatal and still posts the comment; it only fails the job when coverage is below the threshold you set in the action (e.g. 80%). So you can use a lower (or higher) threshold in the action than in the project.
+
 ## Publishing
 
 1. Create a git tag (e.g. `v1`) and push it.

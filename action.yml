@@ -38,7 +38,13 @@ runs:
       run: |
         set -o pipefail
         mix test --cover 2>&1 | tee coverage_report.log
-        echo "exitcode=$?" >> "$GITHUB_OUTPUT"
+        MIX_EXIT=$?
+        # Exit 3 = coverage threshold not met (project's mix.exs). We enforce our own threshold in the report step.
+        if [ "$MIX_EXIT" = "3" ]; then
+          echo "exitcode=0" >> "$GITHUB_OUTPUT"
+        else
+          echo "exitcode=$MIX_EXIT" >> "$GITHUB_OUTPUT"
+        fi
 
     - name: Post coverage comment
       if: steps.pr.outputs.number != ''
