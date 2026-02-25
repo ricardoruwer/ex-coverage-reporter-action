@@ -36,16 +36,14 @@ runs:
       id: mix
       shell: bash
       run: |
-        set -o pipefail
-        mix test --cover 2>&1 | tee coverage_report.log
-        MIX_EXIT=$?
-        # Exit 3 = coverage threshold not met (project's mix.exs). We enforce our own threshold in the report step.
-        if [ "$MIX_EXIT" = "3" ]; then
+        set +e
+        if mix test --cover 2>&1 | tee coverage_report.log; then
           echo "exitcode=0" >> "$GITHUB_OUTPUT"
-          exit 0
+        else
+          MIX_EXIT=$?
+          # Exit 3 = coverage threshold not met (project's mix.exs). report.js enforces our threshold.
+          echo "exitcode=$([ "$MIX_EXIT" = "3" ] && echo 0 || echo $MIX_EXIT)" >> "$GITHUB_OUTPUT"
         fi
-        echo "exitcode=$MIX_EXIT" >> "$GITHUB_OUTPUT"
-        exit $MIX_EXIT
 
     - name: Post coverage comment
       if: steps.pr.outputs.number != ''
