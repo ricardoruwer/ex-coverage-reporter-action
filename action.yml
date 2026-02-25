@@ -1,0 +1,56 @@
+name: 'Ex Coverage Reporter'
+description: 'Runs mix test --cover and posts coverage summary as a PR comment'
+branding:
+  icon: 'percent'
+  color: 'green'
+
+inputs:
+  github-token:
+    description: 'Token for GitHub API (e.g. github.token)'
+    required: true
+  coverage-threshold:
+    description: 'Minimum coverage percentage (default 80)'
+    required: false
+    default: '80'
+  issue-number:
+    description: 'PR/issue number for the comment (default: from pull_request event)'
+    required: false
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Resolve PR number
+      id: pr
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.issue-number }}" ]; then
+          echo "number=${{ inputs.issue-number }}" >> "$GITHUB_OUTPUT"
+        elif [ -n "${GITHUB_EVENT_PATH}" ] && [ -f "${GITHUB_EVENT_PATH}" ]; then
+          NUM=$(jq -r '.pull_request.number // empty' "$GITHUB_EVENT_PATH")
+          if [ -n "$NUM" ]; then
+            echo "number=$NUM" >> "$GITHUB_OUTPUT"
+          fi
+        fi
+
+    - name: Run mix test with coverage
+      id: mix
+      shell: bash
+      run: |
+        set -o pipefail
+        mix test --cover 2>&1 | tee coverage_report.log
+        echo "exitcode=$?" >> "$GITHUB_OUTPUT"
+
+    - name: Post coverage comment
+      if: steps.pr.outputs.number != ''
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        ISSUE_NUMBER: ${{ steps.pr.outputs.number }}
+        COVERAGE_THRESHOLD: ${{ inputs.coverage-threshold }}
+      run: node "$GITHUB_ACTION_PATH/report.js" coverage_report.log
+      shell: bash
+
+    - name: Fail if tests failed (no PR comment context)
+      if: steps.pr.outputs.number == '' && steps.mix.outputs.exitcode != '0'
+      shell: bash
+      run: exit ${{ steps.mix.outputs.exitcode }}
